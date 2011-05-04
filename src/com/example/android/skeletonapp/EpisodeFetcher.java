@@ -6,14 +6,31 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 
-import sncatalog.webservice.MobileEpisode;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import sncatalog.shared.*;
 
 public class EpisodeFetcher {
 
 	public EpisodeFetcher() {
+	}
+	
+	public ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
+		URI url = new URI("https://sn-catalog.appspot.com/lite-episode/new/");
+		return (ArrayList) getRemoteObject(url);
 	}
 
 	public MobileEpisode getEpisode(int episodeNumber) {
@@ -27,27 +44,23 @@ public class EpisodeFetcher {
 			else
 				urlNumber = Integer.toString(episodeNumber);
 
-			URL url = new URL("http://www.grc.com/sn/sn-" + urlNumber + ".txt");
-			url = new URL("https://sn-catalog.appspot.com/episode/144");
+			URI url = new URI("https://sn-catalog.appspot.com/episode/" + urlNumber);
 
-			URLConnection conn = url.openConnection();
-			BufferedReader in = new BufferedReader(
-					new InputStreamReader(
-							conn.getInputStream()));
-			String inputLine;
-			String serializedObject = "";
-			while ((inputLine = in.readLine()) != null) {
-				serializedObject += inputLine;
-			}
-
-			byte[] serializedBytes = hexStringToByteArray(serializedObject);
+			MobileEpisode episode = (MobileEpisode)getRemoteObject(url);
+			/*
+			byte[] serializedBytes = toByteArray(serializedObject);
 			ByteArrayInputStream bis = new ByteArrayInputStream(serializedBytes);
 			ObjectInputStream ois = new ObjectInputStream(bis); 
-			MobileEpisode episode = null;
 
-			episode = (sncatalog.webservice.MobileEpisode)ois.readObject();
+			episode = (MobileEpisode)ois.readObject();
 			ois.close(); 
 			return episode;
+			*/
+			////////episode = (MobileEpisode) sncatalog.shared.Serializer.deserialize(serializedObject);
+			return episode;
+			//@SuppressWarnings("unchecked")
+			//ArrayList<MobileEpisode> mes = (ArrayList<MobileEpisode>) sncatalog.shared.Serializer.deserialize(serializedObject);
+			//return mes;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -55,15 +68,18 @@ public class EpisodeFetcher {
 
 		return null;
 	}
+	
+	private Object getRemoteObject(URI url) throws IOException, ClassNotFoundException {
 
-	private byte[] hexStringToByteArray(String s) {
-		int len = s.length();
-		byte[] data = new byte[len / 2];
-		for (int i = 0; i < len; i += 2) {
-			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-					+ Character.digit(s.charAt(i+1), 16));
-		}
-		return data;
+		DefaultHttpClient httpClient = new DefaultHttpClient();
+		HttpUriRequest request = new HttpGet(url);
+		request.addHeader("Accept-Encoding", "gzip");
+		
+		ResponseHandler<String> responseHandler = new BasicResponseHandler();
+		String response = httpClient.execute(request, responseHandler);
+		
+		return (Object)sncatalog.shared.Serializer.deserialize(response);
+		
 	}
 
 }

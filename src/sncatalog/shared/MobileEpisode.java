@@ -1,4 +1,4 @@
-package sncatalog.webservice;
+package sncatalog.shared;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -8,28 +8,28 @@ import java.io.Serializable;
 
 public class MobileEpisode implements Serializable {
 
-	private int Episode;
+	private Long Episode;
 	private String Title;
 	private String Link;
 	private Date pubDate;
 	private String Description;
 	private String Transscript;
-	private int Duration;
+	private Long Duration;
 	
 	public MobileEpisode(int episode, String title, String link, 
 			Date pubDate, String description, String transscript,
 			int duration) {
 		
-		this.Episode = episode;
+		this.Episode = new Long(episode);
 		this.Title = title;
 		this.Link = link;
 		this.Description = description;
 		this.Transscript = transscript;
 		this.pubDate = pubDate;
-		this.Duration = duration;
+		this.Duration = new Long(duration);
 	}
 
-	public int getEpisode() {
+	public Long getEpisode() {
 		return Episode;
 	}
 
@@ -53,11 +53,11 @@ public class MobileEpisode implements Serializable {
 		return Transscript;
 	}
 
-	public int getDuration() {
+	public Long getDuration() {
 		return Duration;
 	}
 
-	public void setEpisode(int episode) {
+	public void setEpisode(Long episode) {
 		Episode = episode;
 	}
 
@@ -81,7 +81,7 @@ public class MobileEpisode implements Serializable {
 		Transscript = transscript;
 	}
 
-	public void setDuration(int duration) {
+	public void setDuration(Long duration) {
 		Duration = duration;
 	}
 	
