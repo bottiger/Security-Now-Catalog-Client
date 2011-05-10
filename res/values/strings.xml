@@ -26,5 +26,9 @@
     <!-- This is a complex string containing style runs. -->
     <string name="main_label">Hello <u>th<ignore>e</ignore>re</u>, <i>you</i> <b>Activity</b>!</string>
     <string name="app_name">Hello There</string>
+    <string name="button1">Description</string>
+    <string name="button2">Transscript</string>
+    <string name="button3">Shownotes</string>
+    <string name="button4">Something</string>
 </resources>
 

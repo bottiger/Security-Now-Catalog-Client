@@ -2,26 +2,44 @@ package sncatalog.shared;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.StreamCorruptedException;
 
 public class Serializer {
 	
 	static final String HEXES = "0123456789ABCDEF";
 	
-	public static String serialize(Object o) throws IOException {
+	public static byte[] byteSerialize(Object o) throws IOException {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream(); 
 		ObjectOutputStream os = new ObjectOutputStream(stream);
 		
 		os.writeObject(o);
 		os.close();
-		return toHex(stream.toByteArray());
+		return stream.toByteArray();
+	}
+	
+	public static String serialize(Object o) throws IOException {
+		return toHex(byteSerialize(o));
 	}
 	
 	public static Object deserialize(String hexString)  throws IOException, ClassNotFoundException {
 		byte[] serializedBytes = toByteArray(hexString);
-		ByteArrayInputStream bis = new ByteArrayInputStream(serializedBytes);
+		return deserialize(serializedBytes);
+	}
+	
+	public static Object deserialize(File file) throws StreamCorruptedException, IOException, ClassNotFoundException {
+		FileInputStream fis = new FileInputStream(file);
+		byte fileContent[] = new byte[(int)file.length()];
+		fis.read(fileContent);
+		return deserialize(fileContent);
+	}
+	
+	public static Object deserialize(byte[] bytes) throws StreamCorruptedException, IOException, ClassNotFoundException {
+		ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
 		ObjectInputStream ois = new ObjectInputStream(bis); 
 		
 		Object o = null;

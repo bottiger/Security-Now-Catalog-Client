@@ -56,11 +56,6 @@ public class MyListView extends ListActivity
 		);
 		this.makeAdapter(episodes);
 		setListAdapter(adapter);
- 
-        //setListAdapter(new ArrayAdapter<String>(this,
-        //    android.R.layout.simple_list_item_1, episodes));
-        //setListAdapter(new ArrayAdapter<String>(this,
-        //       R.layout.list_item, episodes));
     }    
  
     @SuppressWarnings("unchecked")
@@ -83,8 +78,10 @@ public class MyListView extends ListActivity
 	}
     
     private void makeAdapter(ArrayList<MobileEpisode> me) {
-    	for (MobileEpisode e : me) {
+    	for (int i = 0; i > me.size(); i++) {
+    		MobileEpisode e = me.get(i);
     		HashMap<String,String> map = new HashMap<String,String>();
+    		map.put("index", i+"");
     		map.put("number", e.getLink());
     		map.put("episode", e.getEpisode().toString());
     		map.put("title", e.getTitle());
@@ -100,14 +97,18 @@ public class MyListView extends ListActivity
         //Toast.makeText(this, 
         //    "You have selected: " + selection.get("episode"), 
         //    Toast.LENGTH_SHORT).show();		
-		viewEpisode(Integer.parseInt((String)selection.get("episode")));
+		viewEpisode(Integer.parseInt((String)selection.get("index")));
     }  
 	
-	private void viewEpisode(int episode) {
+	private void viewEpisode(int episodeIndex) {
+		MobileEpisode me = episodes.get(episodeIndex);
 		Intent i = new Intent(this, EpisodeActivity.class);
-		Bundle bundle = new Bundle(); //bundle is like the letter
-		bundle.putInt("episode", episode); //arg1 is the keyword of the txt, arg2 is the txt 
-		i.putExtras(bundle);//actually it's bundle who carries the content u wanna pass
+		Bundle bundle = new Bundle();
+		bundle.putInt("episode", me.getEpisode().intValue());
+		bundle.putString("title", me.getTitle());
+		bundle.putString("description", me.getDescription());
+		
+		i.putExtras(bundle);
 		startActivity(i);
 	}
 	

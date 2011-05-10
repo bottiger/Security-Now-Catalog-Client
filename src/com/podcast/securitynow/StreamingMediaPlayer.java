@@ -53,10 +53,10 @@ public class StreamingMediaPlayer {
 	
 	private int counter = 0;
 	
- 	public StreamingMediaPlayer(Context  context,TextView textStreamed, Button	playButton, Button	streamButton,ProgressBar	progressBar) 
+ 	public StreamingMediaPlayer(Context  context, Button	playButton, Button	streamButton,ProgressBar	progressBar) 
  	{
  		this.context = context;
-		this.textStreamed = textStreamed;
+		//this.textStreamed = textStreamed;
 		this.playButton = playButton;
 		this.progressBar = progressBar;
 	}

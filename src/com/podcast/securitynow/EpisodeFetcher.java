@@ -1,10 +1,18 @@
 package com.podcast.securitynow;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.io.OutputStream;
+import java.io.StreamCorruptedException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -21,11 +29,17 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 
+import android.content.Context;
+
 import sncatalog.shared.*;
 
 public class EpisodeFetcher {
+	
+	private File dataDir;
 
-	public EpisodeFetcher() {
+	public EpisodeFetcher(File dataDir) {
+		this.dataDir = dataDir;
+		if (!dataDir.exists())	dataDir.mkdir();
 	}
 	
 	public ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
@@ -33,8 +47,10 @@ public class EpisodeFetcher {
 		return (ArrayList) getRemoteObject(url);
 	}
 
-	public MobileEpisode getEpisode(int episodeNumber) {
-
+	public Episode getEpisode(int episodeNumber) {
+		if (this.episodeExistsOnDisk(episodeNumber)) {
+			return this.loadFromDisk(episodeNumber);
+		}
 		try {
 			String urlNumber;
 			if (episodeNumber < 10) 
@@ -46,21 +62,12 @@ public class EpisodeFetcher {
 
 			URI url = new URI("https://sn-catalog.appspot.com/episode/" + urlNumber);
 
-			MobileEpisode episode = (MobileEpisode)getRemoteObject(url);
-			/*
-			byte[] serializedBytes = toByteArray(serializedObject);
-			ByteArrayInputStream bis = new ByteArrayInputStream(serializedBytes);
-			ObjectInputStream ois = new ObjectInputStream(bis); 
-
-			episode = (MobileEpisode)ois.readObject();
-			ois.close(); 
+			MobileEpisode me = (MobileEpisode)getRemoteObject(url);
+			Episode episode = new Episode(me);
+			
+			this.saveToDisk(episode);
+			
 			return episode;
-			*/
-			////////episode = (MobileEpisode) sncatalog.shared.Serializer.deserialize(serializedObject);
-			return episode;
-			//@SuppressWarnings("unchecked")
-			//ArrayList<MobileEpisode> mes = (ArrayList<MobileEpisode>) sncatalog.shared.Serializer.deserialize(serializedObject);
-			//return mes;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -80,6 +87,48 @@ public class EpisodeFetcher {
 		
 		return (Object)Serializer.deserialize(response);
 		
+	}
+	
+	private boolean episodeExistsOnDisk(int number) {
+		return episodeFile(number).exists();
+	}
+	
+	private Episode loadFromDisk(int number) {
+		Episode episode = null;
+		File file = episodeFile(number);
+		try {
+			episode = (Episode) Serializer.deserialize(file);
+		} catch (FileNotFoundException e) {
+			return null;
+		} catch (StreamCorruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return episode;
+	}
+	
+	private boolean saveToDisk(Episode episode) {
+		File outputFile = episodeFile(episode.getEpisode().intValue());
+		FileOutputStream fos;
+		try {
+			fos = new FileOutputStream(outputFile);
+			byte[] fileBytes = Serializer.byteSerialize(episode);
+			fos.write(fileBytes);
+			fos.close();
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
+	}
+	
+	private File episodeFile(int number) {
+		return new File(this.dataDir, number+".episode");
 	}
 
 }
