@@ -1,36 +1,30 @@
-package com.example.android.skeletonapp;
+package com.podcast.securitynow;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import com.podcast.securitynow.R;
+
 import sncatalog.shared.MobileEpisode;
+import sncatalog.shared.Serializer;
 import android.app.ListActivity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
- 
+
+
 public class MyListView extends ListActivity 
 {
-	/*
-    String[] presidents = {
-            "Dwight D. Eisenhower",
-            "John F. Kennedy",
-            "Lyndon B. Johnson",
-            "Richard Nixon",
-            "Gerald Ford",
-            "Jimmy Carter",
-            "Ronald Reagan",
-            "George H. W. Bush",
-            "Bill Clinton",
-            "George W. Bush",
-            "Barack Obama",
-            ef.getEpisode(200).getTitle()
-    };
-    */
+
 	ArrayList<MobileEpisode> episodes = null;
 	static final ArrayList<HashMap<String,String>> list = new ArrayList<HashMap<String,String>>();
  
@@ -69,15 +63,30 @@ public class MyListView extends ListActivity
         //       R.layout.list_item, episodes));
     }    
  
-    private ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
-    	EpisodeFetcher ef = new EpisodeFetcher();
-    	return ef.getEpisodes();
+    @SuppressWarnings("unchecked")
+	private ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
+    	InputStream ins = getResources().openRawResource(R.raw.episodes);
+    	
+    	BufferedReader r = new BufferedReader(new InputStreamReader(ins));
+    	StringBuilder fileContent = new StringBuilder();
+    	String line;
+    	while ((line = r.readLine()) != null) {
+    	    fileContent.append(line);
+    	}
+    	
+    	return (ArrayList<MobileEpisode>) Serializer.deserialize(fileContent.toString());
+    	
+  
+    	// For remote
+    	//EpisodeFetcher ef = new EpisodeFetcher();
+    	//return ef.getEpisodes();
 	}
     
     private void makeAdapter(ArrayList<MobileEpisode> me) {
     	for (MobileEpisode e : me) {
     		HashMap<String,String> map = new HashMap<String,String>();
     		map.put("number", e.getLink());
+    		map.put("episode", e.getEpisode().toString());
     		map.put("title", e.getTitle());
     		list.add(map);
     	}
@@ -87,10 +96,20 @@ public class MyListView extends ListActivity
     ListView parent, View v,
     int position, long id) 
     {   
-        Toast.makeText(this, 
-            "You have selected ",
-            Toast.LENGTH_SHORT).show();
+		HashMap selection = (HashMap)getListView().getItemAtPosition(position);
+        //Toast.makeText(this, 
+        //    "You have selected: " + selection.get("episode"), 
+        //    Toast.LENGTH_SHORT).show();		
+		viewEpisode(Integer.parseInt((String)selection.get("episode")));
     }  
+	
+	private void viewEpisode(int episode) {
+		Intent i = new Intent(this, EpisodeActivity.class);
+		Bundle bundle = new Bundle(); //bundle is like the letter
+		bundle.putInt("episode", episode); //arg1 is the keyword of the txt, arg2 is the txt 
+		i.putExtras(bundle);//actually it's bundle who carries the content u wanna pass
+		startActivity(i);
+	}
 	
 	
 }

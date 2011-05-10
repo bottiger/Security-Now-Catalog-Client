@@ -1,4 +1,4 @@
-package com.example.android.skeletonapp;
+package com.podcast.securitynow;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -78,7 +78,7 @@ public class EpisodeFetcher {
 		ResponseHandler<String> responseHandler = new BasicResponseHandler();
 		String response = httpClient.execute(request, responseHandler);
 		
-		return (Object)sncatalog.shared.Serializer.deserialize(response);
+		return (Object)Serializer.deserialize(response);
 		
 	}
 

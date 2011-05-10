@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package com.example.android.skeletonapp;
+package com.podcast.securitynow;
+
+import com.podcast.securitynow.R;
 
 import android.app.Activity;
 import android.content.Intent;
