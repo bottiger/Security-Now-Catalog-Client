@@ -78,7 +78,7 @@ public class MyListView extends ListActivity
 	}
     
     private void makeAdapter(ArrayList<MobileEpisode> me) {
-    	for (int i = 0; i > me.size(); i++) {
+    	for (int i = 0; i < me.size(); i++) {
     		MobileEpisode e = me.get(i);
     		HashMap<String,String> map = new HashMap<String,String>();
     		map.put("index", i+"");

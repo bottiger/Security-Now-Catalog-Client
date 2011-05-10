@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Html;
+import android.text.Spanned;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -50,7 +51,6 @@ public final class EpisodeActivity  extends Activity{
 	@Override
     public void onCreate(Bundle savedInstanceState)
     {
-        Log.v(classIdentifier, "Activity State: onCreate()");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.episode);
         // this.getExternalFilesDir(null)
@@ -66,7 +66,8 @@ public final class EpisodeActivity  extends Activity{
         
         Bundle bun = getIntent().getExtras();
         mTitle.setText(bun.getString("title"));
-        mDescription.setText(Html.fromHtml(bun.getString("description")) );
+        Spanned desc = Html.fromHtml(bun.getString("description"));
+        mDescription.setText(desc);
         
         final Button button = (Button) findViewById(R.id.play);
         button.setOnClickListener(new View.OnClickListener() {
@@ -84,12 +85,14 @@ public final class EpisodeActivity  extends Activity{
         });
     }
 	
-	public void onPostCreate(Bundle savedInstanceState) {
+	public void onStart() {
+		super.onStart();
 		File folder = new File(Environment.getExternalStorageDirectory(), "/sn");
         mFetcher = new EpisodeFetcher(folder);
 		
 		Bundle bun = getIntent().getExtras();
 		mEpisode = new Episode(mFetcher.getEpisode(bun.getInt("episode")));
+		mDescription.setText(mEpisode.getDescription());
 		startStreamingAudio(mEpisode.getLink());
 	}
 	
