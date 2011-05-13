@@ -6,7 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.io.Serializable;
 
-public class MobileEpisode implements Serializable {
+public class MobileEpisode implements Serializable, Comparable<MobileEpisode> {
 
 	private Long Episode;
 	private String Title;
@@ -83,6 +83,26 @@ public class MobileEpisode implements Serializable {
 
 	public void setDuration(Long duration) {
 		Duration = duration;
+	}
+
+	@Override
+	public int compareTo(MobileEpisode obj) {
+		if (obj instanceof MobileEpisode) {
+            
+            MobileEpisode episode = (MobileEpisode) obj;
+            if (this.Episode > episode.getEpisode())
+                return 1;
+            else if (this.Episode < episode.getEpisode())
+                return -1;
+        }
+        return 0;
+	}
+	
+	public boolean equals(Object obj) {
+		if ( this == obj ) return true;
+		if ( !(obj instanceof MobileEpisode) ) return false;
+		MobileEpisode me = (MobileEpisode)obj;
+		return me.getEpisode()==this.getEpisode();
 	}
 	
 }

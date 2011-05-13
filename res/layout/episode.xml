@@ -102,6 +102,7 @@
 		/>
 		
 		<Button 
+		android:clickable="false"
 		android:layout_height="60sp" 
 		android:id="@+id/play"
 		android:text="play_label" android:layout_gravity="center_horizontal" android:layout_width="90sp"/>

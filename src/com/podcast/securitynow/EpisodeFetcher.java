@@ -35,6 +35,7 @@ import sncatalog.shared.*;
 
 public class EpisodeFetcher {
 	
+	private static final String BASE_URL = "http://sn-catalog.appspot.com/";
 	private File dataDir;
 
 	public EpisodeFetcher(File dataDir) {
@@ -43,8 +44,36 @@ public class EpisodeFetcher {
 	}
 	
 	public ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
-		URI url = new URI("https://sn-catalog.appspot.com/lite-episode/new/");
+		URI url = new URI(BASE_URL + "lite-episode/new");
 		return (ArrayList) getRemoteObject(url);
+	}
+	
+	public ArrayList<MobileEpisode> getNew(ArrayList<MobileEpisode> current) {
+		ArrayList<MobileEpisode> mes = null;
+		try {
+			mes = getEpisodes();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		int localHigh = current.size();
+		for (int i = 0; i < mes.size(); i++) {
+			ArrayList<MobileEpisode> a = new ArrayList();
+			MobileEpisode e = mes.get(i);
+			if (e.getEpisode().intValue() > localHigh) {
+				a.add(e);
+			}		
+			a.addAll(current);
+			current = a;
+		}
+		
+		return current;
 	}
 
 	public Episode getEpisode(int episodeNumber) {
@@ -60,7 +89,7 @@ public class EpisodeFetcher {
 			else
 				urlNumber = Integer.toString(episodeNumber);
 
-			URI url = new URI("https://sn-catalog.appspot.com/episode/" + urlNumber);
+			URI url = new URI(BASE_URL + "episode/" + urlNumber);
 
 			MobileEpisode me = (MobileEpisode)getRemoteObject(url);
 			Episode episode = new Episode(me);
@@ -74,6 +103,25 @@ public class EpisodeFetcher {
 		} 
 
 		return null;
+	}
+	
+	public ArrayList<MobileEpisode> getAll() {
+		URI url;
+		ArrayList<MobileEpisode> mes = null;
+		try {
+			url = new URI(BASE_URL + "lite-episode/all");
+			mes = (ArrayList<MobileEpisode>)getRemoteObject(url);
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return mes;
 	}
 	
 	private Object getRemoteObject(URI url) throws IOException, ClassNotFoundException {
@@ -94,37 +142,13 @@ public class EpisodeFetcher {
 	}
 	
 	private Episode loadFromDisk(int number) {
-		Episode episode = null;
 		File file = episodeFile(number);
-		try {
-			episode = (Episode) Serializer.deserialize(file);
-		} catch (FileNotFoundException e) {
-			return null;
-		} catch (StreamCorruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return episode;
+		return (Episode) FileSystem.load(file);
 	}
 	
 	private boolean saveToDisk(Episode episode) {
 		File outputFile = episodeFile(episode.getEpisode().intValue());
-		FileOutputStream fos;
-		try {
-			fos = new FileOutputStream(outputFile);
-			byte[] fileBytes = Serializer.byteSerialize(episode);
-			fos.write(fileBytes);
-			fos.close();
-		} catch (IOException e) {
-			return false;
-		}
-		return true;
+		return FileSystem.save(episode, outputFile);
 	}
 	
 	private File episodeFile(int number) {

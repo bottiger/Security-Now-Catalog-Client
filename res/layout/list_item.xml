@@ -26,8 +26,8 @@
      <TableRow>
         <TextView
         	android:id="@+id/number" 
-            android:text="Ctrl-O"
-            android:gravity="right"
+            android:text=""
+            android:gravity="left"
             android:padding="1dip" />
     </TableRow>
 

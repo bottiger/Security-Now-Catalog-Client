@@ -20,6 +20,7 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 /**
@@ -29,12 +30,17 @@ import android.widget.TextView;
 public class StreamingMediaPlayer {
 
     private static final int INTIAL_KB_BUFFER =  96*10/8;//assume 96kbps*10secs/8bits per byte
-
+    private static final String FILE_FOLDER = "files";
+    private static final String STREAM_FOLDER = "tmp";
+    
+	private Boolean isDownloaded = false;
+    
 	private TextView textStreamed;
-	
 	private Button playButton;
+	private SeekBar	progressBar;
 	
-	private ProgressBar	progressBar;
+	private File destinationFolder;
+	private File tmpFolder;
 	
 	//  Track for display by progressBar
 	private long mediaLengthInKb, mediaLengthInSeconds;
@@ -43,7 +49,7 @@ public class StreamingMediaPlayer {
 	// Create Handler to call View updates on the main UI thread.
 	private final Handler handler = new Handler();
 
-	private MediaPlayer 	mediaPlayer;
+	private MediaPlayer mediaPlayer;
 	
 	private File downloadingMediaFile; 
 	
@@ -53,12 +59,21 @@ public class StreamingMediaPlayer {
 	
 	private int counter = 0;
 	
- 	public StreamingMediaPlayer(Context  context, Button	playButton, Button	streamButton,ProgressBar	progressBar) 
+ 	public StreamingMediaPlayer(Context  context, 
+ 								Button	playButton, 
+ 								Button	streamButton,
+ 								SeekBar	progressBar,
+ 								File destination) 
  	{
  		this.context = context;
 		//this.textStreamed = textStreamed;
 		this.playButton = playButton;
 		this.progressBar = progressBar;
+		this.destinationFolder = new File(destination, FILE_FOLDER+"/");
+		this.tmpFolder = new File(destination, STREAM_FOLDER+"/");
+		
+		if (!destinationFolder.exists())	destinationFolder.mkdir();
+		if (!tmpFolder.exists())	tmpFolder.mkdir();
 	}
 	
     /**  
@@ -106,8 +121,9 @@ public class StreamingMediaPlayer {
         this.mediaLengthInKb = cn.getContentLength() / 1024;
         this.mediaLengthInSeconds = this.mediaLengthInKb * 8 / 64;
         
-		downloadingMediaFile = new File(context.getCacheDir(),"downloadingMedia_" + (counter++) + ".dat");
-        FileOutputStream out = new FileOutputStream(downloadingMediaFile);   
+		//downloadingMediaFile = new File(context.getCacheDir(),"downloadingMedia_" + (counter++) + ".dat");
+		downloadingMediaFile = new File(this.tmpFolder,"downloadingMedia_" + (counter++) + ".dat");
+		FileOutputStream out = new FileOutputStream(downloadingMediaFile);   
         byte buf[] = new byte[16384];
         int totalBytesRead = 0, incrementalBytesRead = 0;
         do {
@@ -120,15 +136,52 @@ public class StreamingMediaPlayer {
             totalKbRead = totalBytesRead/1000;
             
             testMediaBuffer();
-           	fireDataLoadUpdate();
+           	updateProgressBar();
         } while (validateNotInterrupted());   
 
        	stream.close();
         if (validateNotInterrupted()) {
-	       	fireDataFullyLoaded();
+	       	downloadCompleted();
         }
     }  
 
+    public MediaPlayer getMediaPlayer() {
+    	return mediaPlayer;
+	}
+    
+    public Boolean isDownloaded() {
+    	return this.isDownloaded;
+    }
+    
+    public void isDownloaded(Boolean downloaded) {
+    	this.isDownloaded = downloaded;
+    }
+	
+    public void startPlayProgressUpdater() {
+    	float progress = (((float)mediaPlayer.getCurrentPosition()/1000)/(float)mediaLengthInSeconds);
+    	progressBar.setProgress((int)(progress*100));
+    	
+		if (mediaPlayer.isPlaying()) {
+			Runnable notification = new Runnable() {
+		        public void run() {
+		        	startPlayProgressUpdater();
+				}
+		    };
+		    handler.postDelayed(notification,1000);
+    	}
+    }    
+    
+    public void interrupt() {
+    	playButton.setEnabled(false);
+    	isInterrupted = true;
+    	validateNotInterrupted();
+    }
+    
+    public void seekTo(float position) {
+    	int maxPos = mediaPlayer.getDuration();
+    	mediaPlayer.seekTo((int)(position*maxPos));
+    }
+    
     private boolean validateNotInterrupted() {
 		if (isInterrupted) {
 			if (mediaPlayer != null) {
@@ -171,7 +224,8 @@ public class StreamingMediaPlayer {
     
     private void startMediaPlayer() {
         try {   
-        	File bufferedFile = new File(context.getCacheDir(),"playingMedia" + (counter) + ".dat");
+        	//File bufferedFile = new File(context.getCacheDir(),"playingMedia" + (counter) + ".dat");
+        	File bufferedFile = new File(this.tmpFolder,"playingMedia" + (counter) + ".dat");
         	moveFile(downloadingMediaFile,bufferedFile);
     		
         	Log.e("Player",bufferedFile.length()+"");
@@ -198,7 +252,16 @@ public class StreamingMediaPlayer {
      */  
     private void transferBufferToMediaPlayer() {
 	    try {
-	    	// First determine if we need to restart the player after transferring data...e.g. perhaps the user pressed pause
+	    	/* 
+	    	 * Copy the current data into a "bufferedFile" which can
+	    	 * then be fed into the mediaplayer
+	    	 */
+	    	
+        	//File bufferedFile = new File(context.getCacheDir(),"playingMedia" + (counter) + ".dat");
+        	File bufferedFile = new File(this.tmpFolder,"playingMedia" + (counter++) + ".dat");
+        	copyFile(downloadingMediaFile,bufferedFile);
+        	
+	    	// Determine if we need to restart the player after transferring data...e.g. perhaps the user pressed pause
 	    	int curPosition = 0;
 	    	boolean wasPlaying = false;
 	    	if (mediaPlayer != null) {
@@ -207,9 +270,11 @@ public class StreamingMediaPlayer {
 	    		mediaPlayer.pause();
 	    	}
 	    	
-        	File bufferedFile = new File(context.getCacheDir(),"playingMedia" + (counter) + ".dat");
-	    	copyFile(downloadingMediaFile,bufferedFile);
-	    	String newFilePath = bufferedFile.getAbsolutePath();
+        	/*
+        	 * Create a inputStream from the bufferedFile and feed it to
+        	 * the mediaplayer
+        	 */
+        	String newFilePath = bufferedFile.getAbsolutePath();
 	    	FileInputStream fileInputStream = new FileInputStream(newFilePath);
 	    	
 			mediaPlayer = new MediaPlayer();
@@ -217,6 +282,13 @@ public class StreamingMediaPlayer {
     		//mediaPlayer.setAudioStreamType(AudioSystem.STREAM_MUSIC);
     		mediaPlayer.prepare();
     		mediaPlayer.seekTo(curPosition);
+    		
+	    	/*
+        	 * Delete the old "bufferedFile
+        	 */
+	    	File oldBufferedFile = new File(this.tmpFolder,"playingMedia" + (counter) + ".dat");
+	    	if (oldBufferedFile.exists())
+	    		oldBufferedFile.delete();
     		
     		//  Restart if at end of prior beuffered content or mediaPlayer was previously playing.  
     		//	NOTE:  We test for < 1second of data because the media player can stop when there is still
@@ -230,7 +302,7 @@ public class StreamingMediaPlayer {
 		}
     }
     
-    private void fireDataLoadUpdate() {
+    private void updateProgressBar() {
 		Runnable updater = new Runnable() {
 	        public void run() {
 	        	//textStreamed.setText((CharSequence) (totalKbRead + " Kb read"));
@@ -256,41 +328,19 @@ public class StreamingMediaPlayer {
 	    handler.post(updater);
     }
 
-    private void fireDataFullyLoaded() {
+    private void downloadCompleted() {
 		Runnable updater = new Runnable() { 
 			public void run() {
+				isDownloaded(true);
    	        	transferBufferToMediaPlayer();
 	        	//textStreamed.setText((CharSequence) ("Audio full loaded: " + totalKbRead + " Kb read"));
 	        }
 	    };
 	    handler.post(updater);
     }
+
     
-    public MediaPlayer getMediaPlayer() {
-    	return mediaPlayer;
-	}
-	
-    public void startPlayProgressUpdater() {
-    	float progress = (((float)mediaPlayer.getCurrentPosition()/1000)/(float)mediaLengthInSeconds);
-    	progressBar.setProgress((int)(progress*100));
-    	
-		if (mediaPlayer.isPlaying()) {
-			Runnable notification = new Runnable() {
-		        public void run() {
-		        	startPlayProgressUpdater();
-				}
-		    };
-		    handler.postDelayed(notification,1000);
-    	}
-    }    
-    
-    public void interrupt() {
-    	playButton.setEnabled(false);
-    	isInterrupted = true;
-    	validateNotInterrupted();
-    }
-    
-	public void moveFile(File	oldLocation, File	newLocation)
+	private void moveFile(File	oldLocation, File	newLocation)
 	throws IOException {
 
 		if ( oldLocation.exists( )) {

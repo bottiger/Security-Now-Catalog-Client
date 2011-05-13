@@ -1,12 +1,15 @@
 package com.podcast.securitynow;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import com.podcast.securitynow.R;
 
@@ -14,7 +17,10 @@ import sncatalog.shared.MobileEpisode;
 import sncatalog.shared.Serializer;
 import android.app.ListActivity;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -25,14 +31,24 @@ import android.widget.Toast;
 public class MyListView extends ListActivity 
 {
 
+	private static final String EPISODE_LIST = "all-lite.dat";
+	
 	ArrayList<MobileEpisode> episodes = null;
 	static final ArrayList<HashMap<String,String>> list = new ArrayList<HashMap<String,String>>();
- 
+	
+	private File episodeFolder = new File(Environment.getExternalStorageDirectory(), "/sn/");
+	private File liteEpisodeFile = new File(episodeFolder, EPISODE_LIST);
+	
+	private EpisodeFetcher mFetcher;
+	private final Handler handler = new Handler();
+	
     @Override  
     public void onCreate(Bundle savedInstanceState) 
     {
         super.onCreate(savedInstanceState);  
         setContentView(R.layout.listview);
+        
+        mFetcher = new EpisodeFetcher(this.episodeFolder);
         
         try {
 			episodes = this.getEpisodes();
@@ -47,16 +63,60 @@ public class MyListView extends ListActivity
 			e.printStackTrace();
 		}
 		
-		SimpleAdapter adapter = new SimpleAdapter(
-		this,
-		list,
-		R.layout.list_item,
-		new String[] {"number", "title"},
-		new int[] {R.id.number, R.id.title}
-		);
-		this.makeAdapter(episodes);
-		setListAdapter(adapter);
+		if (episodes == null)
+			episodes = mFetcher.getAll();
+		
+		if (liteEpisodeFile.exists() && liteEpisodeFile.canRead()) {
+			episodes = (ArrayList<MobileEpisode>)FileSystem.load(liteEpisodeFile);
+			makeList(episodes);
+			new DownloadNewEpisodesTask().execute(episodes);
+		} else {
+			makeList(episodes);
+			new DownloadAllEpisodesTask().execute(null);
+		}
+		
     }    
+    
+    public void makeList(ArrayList<MobileEpisode> mes) {
+    	list.clear();
+    	ArrayList<MobileEpisode> mesShort = removeDublicates(mes);
+    	mes = mesShort;
+    	Collections.sort(mes);
+    	Collections.reverse(mes);
+    	SimpleAdapter adapter = new SimpleAdapter(
+    			this,
+    			list,
+    			R.layout.list_item,
+    			new String[] {"number", "title"},
+    			new int[] {R.id.number, R.id.title}
+    			);
+    			this.makeAdapter(mes);
+    	setListAdapter(adapter);
+    }
+    
+    public ArrayList<MobileEpisode> removeDublicates(ArrayList<MobileEpisode> mes) {
+    	/*MobileEpisode old = null;
+    	for(int i = 0; i < mes.size(); i++) {
+    		MobileEpisode cur = mes.get(i);
+    		if (old != null) {
+    			long curEp = cur.getEpisode();
+    			long oldEp = old.getEpisode();
+    			if (curEp == oldEp) {
+    				mes.remove(i);
+    			} else {
+    				old = cur;
+    			}
+    		} else {
+    			old = cur;
+    		}
+    	}
+    	return mes;*/
+    	HashSet<MobileEpisode> hs = new HashSet<MobileEpisode>();
+    	hs.addAll(mes);
+    	mes.clear();
+    	mes.addAll(hs);
+    	return mes;
+    }
  
     @SuppressWarnings("unchecked")
 	private ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
@@ -68,18 +128,48 @@ public class MyListView extends ListActivity
     	while ((line = r.readLine()) != null) {
     	    fileContent.append(line);
     	}
-    	
-    	return (ArrayList<MobileEpisode>) Serializer.deserialize(fileContent.toString());
-    	
-  
-    	// For remote
-    	//EpisodeFetcher ef = new EpisodeFetcher();
-    	//return ef.getEpisodes();
+    	String content = fileContent.toString();
+    	if (!content.equals(""))
+    		return (ArrayList<MobileEpisode>) Serializer.deserialize(content);
+    	else
+    		return null;
 	}
     
+    private class DownloadNewEpisodesTask extends AsyncTask<ArrayList<MobileEpisode>, Void, ArrayList<MobileEpisode>> {
+        protected ArrayList<MobileEpisode> doInBackground(ArrayList<MobileEpisode>... params) {
+            return mFetcher.getNew(episodes);
+        }
+
+        protected void onPostExecute(ArrayList<MobileEpisode> mes) {
+        	updateEpisodeList(mes);
+        }
+    }
+    
+    private class DownloadAllEpisodesTask extends AsyncTask<Void, Void, ArrayList<MobileEpisode>> {
+        protected ArrayList<MobileEpisode> doInBackground(Void... params) {
+            return mFetcher.getAll();
+        }
+
+        protected void onPostExecute(ArrayList<MobileEpisode> mes) {
+        	updateEpisodeList(mes); //
+        }
+    }
+    
+    private void updateEpisodeList(ArrayList<MobileEpisode> mes) {
+    	episodes = removeDublicates(mes);
+    	makeList(episodes);
+    	FileSystem.save(episodes, liteEpisodeFile);
+    }
+    
     private void makeAdapter(ArrayList<MobileEpisode> me) {
+    	list.clear();
     	for (int i = 0; i < me.size(); i++) {
     		MobileEpisode e = me.get(i);
+    		if (e.getEpisode() == 298) {
+    			// stop here
+    			int j = 8;
+    			j = j+1;
+    		}
     		HashMap<String,String> map = new HashMap<String,String>();
     		map.put("index", i+"");
     		map.put("number", e.getLink());
@@ -96,8 +186,9 @@ public class MyListView extends ListActivity
 		HashMap selection = (HashMap)getListView().getItemAtPosition(position);
         //Toast.makeText(this, 
         //    "You have selected: " + selection.get("episode"), 
-        //    Toast.LENGTH_SHORT).show();		
-		viewEpisode(Integer.parseInt((String)selection.get("index")));
+        //    Toast.LENGTH_SHORT).show();	
+		String index = (String)selection.get("index");
+		viewEpisode(Integer.parseInt(index));
     }  
 	
 	private void viewEpisode(int episodeIndex) {
