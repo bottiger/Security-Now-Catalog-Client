@@ -48,16 +48,13 @@ public class StreamingMediaPlayer {
 	
 	// Create Handler to call View updates on the main UI thread.
 	private final Handler handler = new Handler();
-
 	private MediaPlayer mediaPlayer;
-	
 	private File downloadingMediaFile; 
-	
 	private boolean isInterrupted;
-	
 	private Context context;
-	
 	private int counter = 0;
+	
+	private Object bufferLock;
 	
  	public StreamingMediaPlayer(Context  context, 
  								Button	playButton, 
@@ -95,8 +92,11 @@ public class StreamingMediaPlayer {
 	            	return;
 	            }   
 	        }   
-	    };   
-	    new Thread(r).start();
+	    };
+	    bufferLock = new Object();
+	    synchronized(bufferLock) {
+	    	new Thread(r).start();
+	    }
     }
     
     /**  
@@ -146,6 +146,16 @@ public class StreamingMediaPlayer {
     }  
 
     public MediaPlayer getMediaPlayer() {
+
+    	synchronized(bufferLock) {
+    		try {
+    			bufferLock.wait();
+    		} catch (InterruptedException e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    		}
+    	}
+
     	return mediaPlayer;
 	}
     
@@ -238,6 +248,7 @@ public class StreamingMediaPlayer {
         	mediaPlayer.setDataSource(fileInputStream.getFD());
         	mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
     		mediaPlayer.prepare();
+    		bufferLock.notify();
         	fireDataPreloadComplete();
         	
         } catch (IOException e) {

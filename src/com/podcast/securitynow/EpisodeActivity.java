@@ -5,12 +5,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.ExecutionException;
 
 import sncatalog.shared.MobileEpisode;
 
 import com.podcast.securitynow.R;
 
 import android.app.Activity;
+import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -53,6 +56,11 @@ public final class EpisodeActivity  extends Activity{
 	private TextView textStreamed;
 	private Button streamButton;
 	
+	private LoadEpisode episodeLoader;
+	private boolean playerStarted = false;
+	private ProgressDialog progDialog;
+	private Object mutex = new Object();
+	
 	@Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -80,14 +88,21 @@ public final class EpisodeActivity  extends Activity{
         final Button button = (Button) findViewById(R.id.play);
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-            	if (audioStreamer == null) {
-            		//startStreamingAudio(mEpisode.getLink(), episodeFolder);
+            	synchronized(mutex) {
+            		try {
+						mutex.wait();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
             	}
-            	if (audioStreamer.getMediaPlayer().isPlaying()) {
-            		audioStreamer.getMediaPlayer().pause();
+            	//startSpinner();
+            	MediaPlayer mp = audioStreamer.getMediaPlayer();
+            	if (mp.isPlaying()) {
+            		mp.pause();
             		mPlayButton.setText(playButtonPlay);
             	} else {
-            		audioStreamer.getMediaPlayer().start();
+            		mp.start();
             		audioStreamer.startPlayProgressUpdater();
             		mPlayButton.setText(playButtonPause);
             	}
@@ -96,28 +111,24 @@ public final class EpisodeActivity  extends Activity{
         });
     }
 	
+	protected void startSpinner() {
+		 progDialog = new ProgressDialog(this);
+         progDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+         progDialog.setMessage("Loading...");
+	}
+	
 	public void onStart() {
 		super.onStart();
         mFetcher = new EpisodeFetcher(this.episodeFolder);
 		
 		Bundle bun = getIntent().getExtras();
-		new LoadEpisode().execute(bun.getInt("episode"));
+		episodeLoader = new LoadEpisode();
+		episodeLoader.execute(bun.getInt("episode"));
+		
 		//mEpisode = new Episode(mFetcher.getEpisode(bun.getInt("episode")));
 		//mDescription.setText(mEpisode.getDescription());
 	}
 	
-	/*
-	public void loadEpisode(final int number) {
-		Runnable r = new Runnable() {   
-	        public void run() {   
-	        	mEpisode = new Episode(mFetcher.getEpisode(number));
-	        	mDescription.setText(mEpisode.getDescription());
-	        	mButton2.setTextColor(R.color.red);
-	        }   
-	    };   
-	    new Thread(r).start();
-	}
-	*/
 	private class LoadEpisode extends AsyncTask<Integer, Void, Boolean> {
         protected Boolean doInBackground(Integer... number) {
         	mEpisode = new Episode(mFetcher.getEpisode(number[0])); //
@@ -126,8 +137,9 @@ public final class EpisodeActivity  extends Activity{
 
         protected void onPostExecute(Boolean t) {
         	mDescription.setText(mEpisode.getDescription());
-        	mPlayButton.setClickable(true);
     		startStreamingAudio(mEpisode.getLink(), episodeFolder);
+    		mPlayButton.setClickable(true);
+    		playerStarted = true;
         }
     }
 	
@@ -180,6 +192,7 @@ public final class EpisodeActivity  extends Activity{
     											mProgressBar,
     											folder);
     		audioStreamer.startStreaming(url);
+    		mutex.notify();
     		//audioStreamer.startStreaming("http://www.pocketjourney.com/downloads/pj/tutorials/audio.mp3",1677, 214);
     		//streamButton.setEnabled(false);
     	} catch (IOException e) {

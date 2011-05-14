@@ -78,9 +78,6 @@ public class MyListView extends ListActivity
     }    
     
     public void makeList(ArrayList<MobileEpisode> mes) {
-    	list.clear();
-    	ArrayList<MobileEpisode> mesShort = removeDublicates(mes);
-    	mes = mesShort;
     	Collections.sort(mes);
     	Collections.reverse(mes);
     	SimpleAdapter adapter = new SimpleAdapter(
@@ -90,32 +87,8 @@ public class MyListView extends ListActivity
     			new String[] {"number", "title"},
     			new int[] {R.id.number, R.id.title}
     			);
-    			this.makeAdapter(mes);
+    	this.makeAdapter(mes);
     	setListAdapter(adapter);
-    }
-    
-    public ArrayList<MobileEpisode> removeDublicates(ArrayList<MobileEpisode> mes) {
-    	/*MobileEpisode old = null;
-    	for(int i = 0; i < mes.size(); i++) {
-    		MobileEpisode cur = mes.get(i);
-    		if (old != null) {
-    			long curEp = cur.getEpisode();
-    			long oldEp = old.getEpisode();
-    			if (curEp == oldEp) {
-    				mes.remove(i);
-    			} else {
-    				old = cur;
-    			}
-    		} else {
-    			old = cur;
-    		}
-    	}
-    	return mes;*/
-    	HashSet<MobileEpisode> hs = new HashSet<MobileEpisode>();
-    	hs.addAll(mes);
-    	mes.clear();
-    	mes.addAll(hs);
-    	return mes;
     }
  
     @SuppressWarnings("unchecked")
@@ -156,13 +129,14 @@ public class MyListView extends ListActivity
     }
     
     private void updateEpisodeList(ArrayList<MobileEpisode> mes) {
-    	episodes = removeDublicates(mes);
+    	episodes = mes;
     	makeList(episodes);
     	FileSystem.save(episodes, liteEpisodeFile);
     }
     
     private void makeAdapter(ArrayList<MobileEpisode> me) {
     	list.clear();
+    	HashMap<Long, Boolean> hm = new HashMap<Long, Boolean>();
     	for (int i = 0; i < me.size(); i++) {
     		MobileEpisode e = me.get(i);
     		if (e.getEpisode() == 298) {
@@ -170,12 +144,15 @@ public class MyListView extends ListActivity
     			int j = 8;
     			j = j+1;
     		}
-    		HashMap<String,String> map = new HashMap<String,String>();
-    		map.put("index", i+"");
-    		map.put("number", e.getLink());
-    		map.put("episode", e.getEpisode().toString());
-    		map.put("title", e.getTitle());
-    		list.add(map);
+    		if (!hm.containsKey(e.getEpisode())) {
+    			hm.put(e.getEpisode(), true);
+    			HashMap<String,String> map = new HashMap<String,String>();
+    			map.put("index", i+"");
+    			map.put("number", e.getLink());
+    			map.put("episode", e.getEpisode().toString());
+    			map.put("title", e.getTitle());
+    			list.add(map);
+    		}
     	}
     }
 
