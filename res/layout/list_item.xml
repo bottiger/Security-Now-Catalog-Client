@@ -9,7 +9,7 @@
    	android:src="@drawable/logo"
    	android:layout_width="60sp"
     android:layout_height="60sp"
-   	android:background="#0000ff"
+   	android:paddingRight="3dip"
    	/>
 
 	<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -20,12 +20,12 @@
     <TableRow android:id="@+id/episode">
         <TextView
         	android:id="@+id/title" 
-        	android:textSize="10pt"
+        	android:textSize="9pt"
             android:padding="1dip" />
      </TableRow>
      <TableRow>
         <TextView
-        	android:id="@+id/number" 
+        	android:id="@+id/subtitle" 
             android:text=""
             android:gravity="left"
             android:padding="1dip" />
@@ -33,4 +33,11 @@
 
 	</TableLayout>
 
+	<ImageView android:id="@+id/throbber"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+		android:src="@drawable/ic_popup_sync_1"
+		android:visibility="gone"
+	/>
+	
 </LinearLayout>

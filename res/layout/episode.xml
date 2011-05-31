@@ -2,11 +2,15 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:padding="3dip">
+    android:layout_alignParentTop="true"
+    android:padding="3dip"
+    android:orientation="vertical">
     
     <ScrollView
+    		android:id="@+id/scrollview"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent">
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="50dip">
      
     <LinearLayout
     	android:id="@+id/episode_metadata"
@@ -25,38 +29,46 @@
    	
    	<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="fill_parent"
+    android:padding="2dip"
     android:stretchColumns="1">
 
-    <TableRow>
+    <TableRow 
+    	android:id="@+id/row1"
+    	android:layout_width="fill_parent" 
+   		android:background="@color/buttonBackground" 
+   		android:clickable="true"
+        android:onClick="buttonClickHandler"
+            >
         <TextView
         	android:id="@+id/button1"
         	android:text="@string/button1" 
-        	android:textSize="10pt"
+        	android:textSize="8pt"
             android:padding="1dip"
-            android:clickable="true"
-            android:onClick="button1ClickHandler"
+            android:textColor="@color/black"
             android:gravity="center" />
+    </TableRow>
+    <TableRow
+    	android:id="@+id/row2"
+    	android:clickable="true"
+        android:onClick="buttonClickHandler"
+    	>
         <TextView
         	android:id="@+id/button2"
         	android:text="@string/button2" 
-        	android:textSize="10pt"
+        	android:textSize="8pt"
             android:padding="1dip"
-            android:clickable="true"
-            android:onClick="button2ClickHandler"
             android:gravity="center" />
-     </TableRow>
-     <TableRow>
+    </TableRow>
+    <TableRow
+    	android:id="@+id/row3"
+    	android:clickable="true"
+        android:onClick="buttonClickHandler"
+    	>
      	<TextView
         	android:id="@+id/button3"
         	android:text="@string/button3" 
-        	android:textSize="10pt"
-            android:padding="1dip"
-            android:gravity="center" />
-        <TextView
-        	android:id="@+id/button4"
-        	android:text="@string/button4" 
-        	android:textSize="10pt"
+        	android:textSize="8pt"
             android:padding="1dip"
             android:gravity="center" />
     </TableRow>
@@ -67,49 +79,13 @@
    	android:text="Description" 
 	android:id="@+id/textarea"
    	android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="fill_parent"
    	/>
-   	<!-- 
-   	<TextView 
-	android:id="@+id/streamtext"
-	android:background="#003300"
-   	android:layout_width="fill_parent"
-    android:layout_height="60sp"
-   	/>
-   	-->
    	 
    	</LinearLayout>
    	
    	</ScrollView>
 
-	<RelativeLayout
-		android:id="@+id/InnerRelativeLayout"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:layout_alignParentBottom="true"
-		android:background="#003300"
-		>
-		 
-		<LinearLayout
-		android:orientation="vertical"
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content">
+	<include layout="@layout/player_control" /> 
 		
-		<SeekBar
-		android:id="@+id/SeekBar01"
-		android:layout_height="wrap_content"
-		android:layout_width="fill_parent"
-		/>
-		
-		<Button 
-		android:clickable="false"
-		android:layout_height="60sp" 
-		android:id="@+id/play"
-		android:text="play_label" 
-		android:layout_gravity="center_horizontal" 
-		android:layout_width="90sp"/>
-		 
-		</LinearLayout>
-		
-	</RelativeLayout>
 </RelativeLayout>

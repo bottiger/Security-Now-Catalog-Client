@@ -2,17 +2,13 @@ package com.podcast.securitynow;
 
 import java.io.File;
 
-import android.content.Context;
+import android.os.Environment;
 
 public class Config {
 	
-	private static Context context;
-	public static File DATA_DIR;
+	private final static String FOLDER_NAME = "sn";
 	
-	public static void setContext(Context c) {
-		context = c;
-		DATA_DIR = c.getExternalFilesDir(null);
-		
-	}
-
+	// added a trailing slash
+	public final static File appFolder = new File(Environment.getExternalStorageDirectory(), File.separator + FOLDER_NAME + File.separator);
+	
 }

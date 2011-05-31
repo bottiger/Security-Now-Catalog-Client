@@ -30,5 +30,7 @@
     <string name="button2">Transscript</string>
     <string name="button3">Shownotes</string>
     <string name="button4">Something</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
 </resources>
 

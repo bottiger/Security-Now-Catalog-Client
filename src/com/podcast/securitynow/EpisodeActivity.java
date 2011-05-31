@@ -2,64 +2,62 @@ package com.podcast.securitynow;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.concurrent.ExecutionException;
-
-import sncatalog.shared.MobileEpisode;
-
-import com.podcast.securitynow.R;
+import java.util.LinkedList;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.Html;
 import android.text.Spanned;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 
 public final class EpisodeActivity  extends Activity{
 	
-	static final String classIdentifier = "EpisodeActivity";
-	static final String playButtonPause = "Pause";
-	static final String playButtonPlay = "Play";
+	private static final String classIdentifier = "EpisodeActivity";
+	private static final String playButtonPause = "Pause";
+	private static final String playButtonPlay = "Play";
 	
-	private MediaPlayer mMp = new MediaPlayer();
-	private File episodeFolder = new File(Environment.getExternalStorageDirectory(), "/sn");
+	private static final String LOADING = "Loading...";
+	
+	private File episodeFolder = Config.appFolder;
 	private EpisodeFetcher mFetcher;
 	
 	private Episode mEpisode = null;
 	private SeekBar mProgressBar = null;
+	private Spanned mShowNotes = null;
 	
 	private Button mPlayButton = null;
 	private TextView mTitle = null;
 	private TextView mDescription = null;
+	private ScrollView mScrollView = null;
 	
-	private TextView mButton1 = null;
-	private TextView mButton2 = null;
-	private TextView mButton3 = null;
-	private TextView mButton4 = null;
+	private LinkedList<TableRow> mButtons = new LinkedList<TableRow>();
 	
 	private boolean isPlaying;
 	private StreamingMediaPlayer audioStreamer = null;
-	private TextView textStreamed;
+	private TextView mStreamTxt;
 	private Button streamButton;
 	
 	private LoadEpisode episodeLoader;
 	private boolean playerStarted = false;
 	private ProgressDialog progDialog;
 	private Object mutex = new Object();
+	private boolean waitForBuffer = true;
+	
+	private MyListView lv;
+	
+	private EpisodeDatabase database;
 	
 	@Override
     public void onCreate(Bundle savedInstanceState)
@@ -68,65 +66,49 @@ public final class EpisodeActivity  extends Activity{
         setContentView(R.layout.episode);
         // this.getExternalFilesDir(null)
         
-        mProgressBar =  (SeekBar) findViewById(R.id.SeekBar01);
+        this.database = new EpisodeDatabase(this);
+
+        mProgressBar =  (SeekBar) findViewById(R.id.SeekBar);
         mProgressBar.setOnSeekBarChangeListener(weightSeekBarListener);
         
         mTitle = (TextView) findViewById(R.id.title);
         mDescription = (TextView) findViewById(R.id.textarea);
-        mPlayButton = (Button) findViewById(R.id.play);
+        mScrollView = (ScrollView) findViewById(R.id.scrollview);
         
-        mButton1 = (TextView) findViewById(R.id.button1);
-        mButton2 = (TextView) findViewById(R.id.button2);
-        mButton3 = (TextView) findViewById(R.id.button3);
-        mButton4 = (TextView) findViewById(R.id.button4);
+        //mStreamTxt = (TextView) findViewById(R.id.streamtxt);
+        
+        TableRow mButton1 = (TableRow) findViewById(R.id.row1);
+        TableRow mButton2 = (TableRow) findViewById(R.id.row2);
+        TableRow mButton3 = (TableRow) findViewById(R.id.row3);
+        
+        mButtons.add(mButton1);
+        mButtons.add(mButton2);
+        mButtons.add(mButton3);
         
         Bundle bun = getIntent().getExtras();
         mTitle.setText(bun.getString("title"));
         Spanned desc = Html.fromHtml(bun.getString("description"));
         mDescription.setText(desc);
         
-        final Button button = (Button) findViewById(R.id.play);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-            	synchronized(mutex) {
-            		try {
-						mutex.wait();
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-            	}
-            	//startSpinner();
-            	MediaPlayer mp = audioStreamer.getMediaPlayer();
-            	if (mp.isPlaying()) {
-            		mp.pause();
-            		mPlayButton.setText(playButtonPlay);
-            	} else {
-            		mp.start();
-            		audioStreamer.startPlayProgressUpdater();
-            		mPlayButton.setText(playButtonPause);
-            	}
-            	isPlaying = !isPlaying;
-            }
-        });
+        mPlayButton = (Button) findViewById(R.id.play);
+        mPlayButton.setOnClickListener(playButtonListener);
     }
-	
-	protected void startSpinner() {
-		 progDialog = new ProgressDialog(this);
-         progDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-         progDialog.setMessage("Loading...");
-	}
-	
+		
 	public void onStart() {
 		super.onStart();
-        mFetcher = new EpisodeFetcher(this.episodeFolder);
 		
 		Bundle bun = getIntent().getExtras();
-		episodeLoader = new LoadEpisode();
-		episodeLoader.execute(bun.getInt("episode"));
+		int episodeNumber = bun.getInt("episode");
 		
-		//mEpisode = new Episode(mFetcher.getEpisode(bun.getInt("episode")));
-		//mDescription.setText(mEpisode.getDescription());
+		Episode episode = database.getEpisode(episodeNumber);
+		
+		if (episode != null)
+			mEpisode = episode;
+		else {
+			mFetcher = new EpisodeFetcher(this.episodeFolder);
+			episodeLoader = new LoadEpisode();
+			episodeLoader.execute(episodeNumber);
+		}
 	}
 	
 	private class LoadEpisode extends AsyncTask<Integer, Void, Boolean> {
@@ -140,26 +122,81 @@ public final class EpisodeActivity  extends Activity{
     		startStreamingAudio(mEpisode.getLink(), episodeFolder);
     		mPlayButton.setClickable(true);
     		playerStarted = true;
+    		database.updateEpisode(mEpisode);
+    		
+    		LoadShowNotes showNotesLoader = new LoadShowNotes();
+    		showNotesLoader.execute(mEpisode.getEpisode().intValue());
         }
     }
 	
-	public void button1ClickHandler(View v) {
-		mDescription.setText(mEpisode.getDescription());
+	private class LoadShowNotes extends AsyncTask<Integer, Void, Spanned> {
+        protected Spanned doInBackground(Integer... number) {
+        	ShowNote sn = new ShowNote(number[0]);
+        	mShowNotes = sn.text;
+        	return mShowNotes;
+        }
+
+        protected void onPostExecute(Spanned showNotes) {
+        	mEpisode.setShowNotes(showNotes);
+        	database.updateEpisode(mEpisode);
+        }
+    }
+	
+	public void buttonClickHandler(View v) {
+		final int id = v.getId();
+		
+		for (TableRow tr : mButtons) {
+			if (id == tr.getId())
+				activateButton(tr);
+			else
+				resetButton(tr);
+		}
+		
+		if (id == R.id.row1) {
+			mDescription.setText(mEpisode.getDescription());
+		} else if (id == R.id.row2) {
+			String t = mEpisode.getTransscript();
+			//System.out.print(t);
+			mDescription.setText(t.toString());
+		} else if (id == R.id.row3) {
+			mDescription.setText(mShowNotes);
+		}
 	}
 	
-	public void button2ClickHandler(View v) {
-		mDescription.setText(mEpisode.getTransscript());
+	private void resetButton(TableRow row) {
+		Resources resource = getApplicationContext().getResources();
+		row.setBackgroundColor(Color.TRANSPARENT); //make the background transparent
+		TextView tv = (TextView)row.getChildAt(0);
+		tv.setTextColor(resource.getColor(R.color.white));
+		//tv.setTextColor(resource.getColor(R));
 	}
 	
-	public void button3ClickHandler(View v) {
-		TextView tv = (TextView) v;
-		tv.setText("Test");
+	private void activateButton(TableRow row) {
+		Resources resource = getApplicationContext().getResources();
+		row.setBackgroundColor(resource.getColor(R.color.buttonBackground));
+		TextView tv = (TextView)row.getChildAt(0);
+		tv.setTextColor(R.color.black);
 	}
 	
-	public void button4ClickHandler(View v) {
-		TextView tv = (TextView) v;
-		tv.setText("Test");
-	}
+	private View.OnClickListener playButtonListener = new View.OnClickListener() {
+        public void onClick(View v) {
+        	if (waitForBuffer) {
+        		synchronized(mutex) {
+        			try {
+        				mutex.wait();
+        			} catch (InterruptedException e) {
+        				// TODO Auto-generated catch block
+        				e.printStackTrace();
+        			}
+        		}
+        	}
+
+        	//startSpinner();
+        	MediaPlayer mp = audioStreamer.getMediaPlayer();
+        	audioStreamer.playButton();
+        	isPlaying = !isPlaying;
+        }
+    };
 	
 	SeekBar.OnSeekBarChangeListener weightSeekBarListener = new SeekBar.OnSeekBarChangeListener() {
 
@@ -179,7 +216,7 @@ public final class EpisodeActivity  extends Activity{
 				  audioStreamer.seekTo(seekBarProgress);
 			  }
 		  }
-		 };
+	};
 
 	private void startStreamingAudio(String url, File folder) {
     	try { 
@@ -190,9 +227,19 @@ public final class EpisodeActivity  extends Activity{
     											mPlayButton, 
     											streamButton,
     											mProgressBar,
-    											folder);
+    											folder,
+    											mStreamTxt);
     		audioStreamer.startStreaming(url);
-    		mutex.notify();
+    		
+    		synchronized(mutex) {
+    			mutex.notify();
+    			this.waitForBuffer = false;
+    		}
+    		
+    		// lv is null
+    		SecurityNow sn = (SecurityNow)this.getApplication();
+    		sn.smp = audioStreamer;
+//    			mutex = new Object();
     		//audioStreamer.startStreaming("http://www.pocketjourney.com/downloads/pj/tutorials/audio.mp3",1677, 214);
     		//streamButton.setEnabled(false);
     	} catch (IOException e) {

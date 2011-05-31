@@ -2,11 +2,13 @@ package com.podcast.securitynow;
 
 import java.text.DecimalFormat;
 import java.util.Arrays;
-import java.util.Date;
 
 import sncatalog.shared.MobileEpisode;
+import android.text.Spanned;
 
 public class Episode extends MobileEpisode {
+	
+	private Spanned showNotes = null;
 
 	public Episode(MobileEpisode me) {
 		super(me.getEpisode().intValue(), 
@@ -19,6 +21,16 @@ public class Episode extends MobileEpisode {
 		// TODO Auto-generated constructor stub
 	}
 	
+	public Spanned getShowNotes() {
+		if (showNotes != null)
+			return showNotes;
+		return null;
+	}
+
+	public void setShowNotes(Spanned showNotes) {
+		this.showNotes = showNotes;
+	}
+
 	public String getLink() {
 		String url = "http://www.podtrac.com/pts/redirect.mp3/aolradio.podcast.aol.com/sn/sn*.mp3";
 		url = url.replace("*", intToString(this.getEpisode().intValue(), 4));

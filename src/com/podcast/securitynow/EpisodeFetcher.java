@@ -1,37 +1,19 @@
 package com.podcast.securitynow;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.OutputStream;
-import java.io.StreamCorruptedException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.List;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import android.content.Context;
-
-import sncatalog.shared.*;
+import sncatalog.shared.MobileEpisode;
+import sncatalog.shared.Serializer;
 
 public class EpisodeFetcher {
 	
@@ -43,15 +25,19 @@ public class EpisodeFetcher {
 		if (!dataDir.exists())	dataDir.mkdir();
 	}
 	
-	public ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
+	public ArrayList<Episode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
 		URI url = new URI(BASE_URL + "lite-episode/new");
-		return (ArrayList) getRemoteObject(url);
+		ArrayList<MobileEpisode> mes = (ArrayList<MobileEpisode>) getRemoteObject(url);
+		ArrayList<Episode> es = new ArrayList<Episode>();
+		for (MobileEpisode me : mes)
+			es.add(new Episode(me));
+		return es;
 	}
 	
-	public ArrayList<MobileEpisode> getNew(ArrayList<MobileEpisode> current) {
-		ArrayList<MobileEpisode> mes = null;
+	public ArrayList<Episode> getNew(ArrayList<Episode> current) {
+		ArrayList<Episode> es = null;
 		try {
-			mes = getEpisodes();
+			es = getEpisodes();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -63,9 +49,9 @@ public class EpisodeFetcher {
 			e.printStackTrace();
 		}
 		int localHigh = current.size();
-		for (int i = 0; i < mes.size(); i++) {
-			ArrayList<MobileEpisode> a = new ArrayList();
-			MobileEpisode e = mes.get(i);
+		for (int i = 0; i < es.size(); i++) {
+			ArrayList<Episode> a = new ArrayList();
+			Episode e = es.get(i);
 			if (e.getEpisode().intValue() > localHigh) {
 				a.add(e);
 			}		
@@ -105,7 +91,7 @@ public class EpisodeFetcher {
 		return null;
 	}
 	
-	public ArrayList<MobileEpisode> getAll() {
+	public ArrayList<Episode> getAll() {
 		URI url;
 		ArrayList<MobileEpisode> mes = null;
 		try {
@@ -121,7 +107,11 @@ public class EpisodeFetcher {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return mes;
+		ArrayList<Episode> es = new ArrayList<Episode>();
+		for (MobileEpisode me : mes)
+			es.add(new Episode(me));
+		
+		return es;
 	}
 	
 	private Object getRemoteObject(URI url) throws IOException, ClassNotFoundException {

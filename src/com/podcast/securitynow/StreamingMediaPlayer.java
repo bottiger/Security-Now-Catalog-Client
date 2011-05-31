@@ -34,8 +34,8 @@ public class StreamingMediaPlayer {
     private static final String STREAM_FOLDER = "tmp";
     
 	private Boolean isDownloaded = false;
-    
-	private TextView textStreamed;
+   
+	private TextView streamTxt;
 	private Button playButton;
 	private SeekBar	progressBar;
 	
@@ -54,16 +54,18 @@ public class StreamingMediaPlayer {
 	private Context context;
 	private int counter = 0;
 	
-	private Object bufferLock;
+	private Object bufferLock = new Object();
+	private boolean waitForBuffer = true;
 	
  	public StreamingMediaPlayer(Context  context, 
  								Button	playButton, 
  								Button	streamButton,
  								SeekBar	progressBar,
- 								File destination) 
+ 								File destination,
+ 								TextView streamTxt) 
  	{
  		this.context = context;
-		//this.textStreamed = textStreamed;
+		this.streamTxt = streamTxt;
 		this.playButton = playButton;
 		this.progressBar = progressBar;
 		this.destinationFolder = new File(destination, FILE_FOLDER+"/");
@@ -72,6 +74,31 @@ public class StreamingMediaPlayer {
 		if (!destinationFolder.exists())	destinationFolder.mkdir();
 		if (!tmpFolder.exists())	tmpFolder.mkdir();
 	}
+ 	
+ 	public void updateUI(SeekBar progressBar, Button playButton) {
+ 		this.progressBar = progressBar;
+ 		this.playButton = playButton;
+ 		setPlayButtonText();
+ 	}
+ 	
+ 	public void playButton() {
+ 		if (mediaPlayer.isPlaying()) {
+ 			mediaPlayer.pause();
+ 		} else {
+ 			mediaPlayer.start();
+ 			startPlayProgressUpdater();
+ 		}
+ 		setPlayButtonText();
+ 			
+ 	}
+ 	
+ 	private void setPlayButtonText() {
+ 		if (mediaPlayer.isPlaying())
+ 			playButton.setText(R.string.pause);
+ 		else
+ 			playButton.setText(R.string.play);
+ 			
+ 	}
 	
     /**  
      * Progressivly download the media to a temporary location and update the MediaPlayer as new content becomes available.
@@ -93,10 +120,9 @@ public class StreamingMediaPlayer {
 	            }   
 	        }   
 	    };
-	    bufferLock = new Object();
-	    synchronized(bufferLock) {
+	    //synchronized(bufferLock) {
 	    	new Thread(r).start();
-	    }
+	    //}
     }
     
     /**  
@@ -134,7 +160,8 @@ public class StreamingMediaPlayer {
             totalBytesRead += numread;
             incrementalBytesRead += numread;
             totalKbRead = totalBytesRead/1000;
-            
+            float displayBytes = Math.round((float)totalBytesRead/1024/1024*100);
+            //Log.e("MegaBytesRead: ",displayBytes/100+"");
             testMediaBuffer();
            	updateProgressBar();
         } while (validateNotInterrupted());   
@@ -147,12 +174,14 @@ public class StreamingMediaPlayer {
 
     public MediaPlayer getMediaPlayer() {
 
-    	synchronized(bufferLock) {
-    		try {
-    			bufferLock.wait();
-    		} catch (InterruptedException e) {
-    			// TODO Auto-generated catch block
-    			e.printStackTrace();
+    	if (waitForBuffer) { 
+    		synchronized(bufferLock) {
+    			try {
+    				bufferLock.wait();
+    			} catch (InterruptedException e) {
+    				// TODO Auto-generated catch block
+    				e.printStackTrace();
+    			}
     		}
     	}
 
@@ -248,7 +277,10 @@ public class StreamingMediaPlayer {
         	mediaPlayer.setDataSource(fileInputStream.getFD());
         	mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
     		mediaPlayer.prepare();
-    		bufferLock.notify();
+    		synchronized (bufferLock) { //
+    			bufferLock.notify();
+    			waitForBuffer = false;
+    		}
         	fireDataPreloadComplete();
         	
         } catch (IOException e) {
@@ -319,7 +351,7 @@ public class StreamingMediaPlayer {
 	        	//textStreamed.setText((CharSequence) (totalKbRead + " Kb read"));
 	    		float loadProgress = ((float)totalKbRead/(float)mediaLengthInKb);
 	    		progressBar.setSecondaryProgress((int)(loadProgress*100));
-	        }
+	    		}
 	    };
 	    handler.post(updater);
     }

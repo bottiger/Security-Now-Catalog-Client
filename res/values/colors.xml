@@ -22,7 +22,10 @@
 <resources>
     <!-- Retrieved via Resources.getColor() and friends. -->
     <color name="red">#f00</color>
+    <color name="black">#000</color>
+    <color name="white">#fff</color>
 
     <!-- Retrieved via Resources.getDrawable() and friends. -->
     <drawable name="semi_black">#80000000</drawable>
+    <color name="buttonBackground">#D3D3D3</color>
 </resources>

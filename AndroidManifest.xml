@@ -34,14 +34,17 @@
          to display to the user for the overall application, and provides
          a default label for all following components.  The syntax here is a
          reference to one of our string resources.-->
-    <application android:label="@string/skeleton_app" android:debuggable="true">
+    <application
+    	android:name="com.podcast.securitynow.SecurityNow" 
+    	android:label="@string/skeleton_app" 
+    	android:debuggable="true">
     	
 
         <!-- An Activity in the application - this is something the user
              can launch and interact with.  The "name" attribute is the
              name of the class within your package that implements this
              activity. -->
-        <activity android:name="SkeletonActivity">
+        <activity android:name="MyListView">
         	<intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -49,11 +52,11 @@
             </intent-filter>
 
         </activity>
-        
-        <activity android:name="MyListView"
-                  android:label="@string/app_name" />
                   
         <activity android:name="EpisodeActivity"
+                  android:label="@string/app_name" />
+		
+		<activity android:name="ShowNotesActivity"
                   android:label="@string/app_name" />
 		
     </application>
