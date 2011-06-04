@@ -21,6 +21,7 @@ import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
 import android.widget.SimpleAdapter;
@@ -55,13 +56,13 @@ public class MyListView extends ListActivity
         super.onCreate(savedInstanceState);  
         setContentView(R.layout.listview);
         
+        this.database = new EpisodeDatabase(this);
+        
         mPlayButton = (Button) findViewById(R.id.play);
         mPlayButton.setOnClickListener(playButtonListener);
         
-        mFetcher = new EpisodeFetcher(this.episodeFolder);
+        mFetcher = new EpisodeFetcher(this.database);
         mProgressBar =  (SeekBar) findViewById(R.id.SeekBar);
-        
-        this.database = new EpisodeDatabase(this);
         
 		episodes = this.getEpisodes();
 		
@@ -115,15 +116,16 @@ public class MyListView extends ListActivity
     public void makeList(ArrayList<Episode> episodes) {
     	Collections.sort(episodes);
     	Collections.reverse(episodes);
-    	/*SimpleAdapter adapter = new SimpleAdapter(
-    			this, 
-    			list,
-    			R.layout.list_item,
-    			new String[] {"subtitle", "title"},
-    			new int[] {R.id.subtitle, R.id.title}
-    			);
-    	this.makeAdapter(episodes);
-    	setListAdapter(adapter);*/
+    	
+    	ListAdapter lad = getListAdapter();
+    	if (lad != null) {
+    		for (int i = 0; i < lad.getCount(); i++) {
+    			Episode episode = (Episode) lad.getItem(i);
+    			if (episodes.contains(episode))
+    				episodes.remove(episode); //
+    		}
+    	}
+
     	setListAdapter(new ContinuousEpisodeAdapter(episodes));
     }
     
@@ -134,25 +136,6 @@ public class MyListView extends ListActivity
     private ArrayList<Episode> getEpisodes() {
     	return this.database.getRecentEpisodes();
     }
-
-    /*
-    @SuppressWarnings("unchecked")
-	private ArrayList<MobileEpisode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
-    	InputStream ins = getResources().openRawResource(R.raw.episodes);
-    	
-    	BufferedReader r = new BufferedReader(new InputStreamReader(ins));
-    	StringBuilder fileContent = new StringBuilder();
-    	String line;
-    	while ((line = r.readLine()) != null) {
-    	    fileContent.append(line);
-    	}
-    	String content = fileContent.toString();
-    	if (!content.equals(""))
-    		return (ArrayList<MobileEpisode>) Serializer.deserialize(content);
-    	else
-    		return null;
-	}
-	*/
     
     private class DownloadNewEpisodesTask extends AsyncTask<ArrayList<Episode>, Void, ArrayList<Episode>> {
         protected ArrayList<Episode> doInBackground(ArrayList<Episode>... params) {
@@ -204,11 +187,6 @@ public class MyListView extends ListActivity
     	HashMap<Long, Boolean> hm = new HashMap<Long, Boolean>();
     	for (int i = 0; i < me.size(); i++) {
     		Episode e = me.get(i);
-    		if (e.getEpisode() == 298) {
-    			// stop here
-    			int j = 8;
-    			j = j+1;
-    		}
     		if (!hm.containsKey(e.getEpisode())) {
     			hm.put(e.getEpisode(), true);
     			HashMap<String,String> map = new HashMap<String,String>();
@@ -233,21 +211,19 @@ public class MyListView extends ListActivity
     ListView parent, View v,
     int position, long id) 
     {   
-		HashMap selection = (HashMap)getListView().getItemAtPosition(position);
+		Episode chosenEpisode = (Episode)getListView().getItemAtPosition(position);
         //Toast.makeText(this, 
         //    "You have selected: " + selection.get("episode"), 
         //    Toast.LENGTH_SHORT).show();	
-		String index = (String)selection.get("index");
-		viewEpisode(Integer.parseInt(index));
+		viewEpisode(chosenEpisode);
     }  
 	
-	private void viewEpisode(int episodeIndex) {
-		MobileEpisode me = episodes.get(episodeIndex);
+	private void viewEpisode(Episode episode) {
 		Intent i = new Intent(this, EpisodeActivity.class);
 		Bundle bundle = new Bundle();
-		bundle.putInt("episode", me.getEpisode().intValue());
-		bundle.putString("title", me.getTitle());
-		bundle.putString("description", me.getDescription());
+		bundle.putInt("episode", episode.getEpisode().intValue());
+		bundle.putString("title", episode.getTitle());
+		bundle.putString("description", episode.getDescription());
 		
 		i.putExtras(bundle);
 		startActivity(i);
@@ -255,6 +231,8 @@ public class MyListView extends ListActivity
 	
 	
 	class ContinuousEpisodeAdapter extends EndlessAdapter {
+		
+		private static final int MAX_EPISODES = 400;
 		private RotateAnimation rotate=null;
 		
 		ContinuousEpisodeAdapter(ArrayList<Episode> list) {
@@ -262,9 +240,13 @@ public class MyListView extends ListActivity
 									R.layout.list_item,
 									list));
 			
-			rotate=new RotateAnimation(0f, 360f, Animation.RELATIVE_TO_SELF,
-																	0.5f, Animation.RELATIVE_TO_SELF,
-																	0.5f);
+			rotate=new RotateAnimation(0f, 
+										360f, 
+										Animation.RELATIVE_TO_SELF,
+										0.5f, 
+										Animation.RELATIVE_TO_SELF,
+										0.5f
+									);
 			rotate.setDuration(600);
 			rotate.setRepeatMode(Animation.RESTART);
 			rotate.setRepeatCount(Animation.INFINITE);
@@ -289,22 +271,26 @@ public class MyListView extends ListActivity
 		protected boolean cacheInBackground() {
 			//SystemClock.sleep(10000);				// pretend to do work
 			
-			return(getWrappedAdapter().getCount()<75);
+			return(getWrappedAdapter().getCount()<MAX_EPISODES);
 		}
 		
 		@Override
 		protected void appendCachedData() {
-			if (getWrappedAdapter().getCount()<75) {
+			if (getWrappedAdapter().getCount()<MAX_EPISODES) {
 				@SuppressWarnings("unchecked")
 				EpisodeAdapter a=(EpisodeAdapter)getWrappedAdapter();
 				
+				int count = a.getCount()-1;
 				
-				Episode episode = a.getItem(a.getCount()-1);
-				ArrayList<Episode> episodes = database.getEpisodes(episode.getEpisode().intValue()-1, 30);
-				
-				//for (int i=0;i<25;i++) { a.add(a.getCount()); }
-				for (Episode ep : episodes)
-					a.add(ep);
+				if (count != -1) {
+					Episode episode = a.getItem(count);
+					ArrayList<Episode> episodes = database.getEpisodes(episode.getEpisode().intValue()-1, 30);
+
+					//for (int i=0;i<25;i++) { a.add(a.getCount()); }
+					for (Episode ep : episodes)
+						if (!a.containsEpisode(ep))
+							a.add(ep);
+				}
 			}
 		}
 	}
@@ -316,6 +302,10 @@ public class MyListView extends ListActivity
 	    public EpisodeAdapter(Context context, int textViewResourceId, ArrayList<Episode> items) {
 	            super(context, textViewResourceId, items);
 	            this.items = items;
+	    }
+	    
+	    public boolean containsEpisode(Episode episode) {
+	    	return this.items.contains(episode);
 	    }
 
 	    @Override

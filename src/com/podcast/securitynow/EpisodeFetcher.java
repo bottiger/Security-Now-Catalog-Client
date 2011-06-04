@@ -18,11 +18,10 @@ import sncatalog.shared.Serializer;
 public class EpisodeFetcher {
 	
 	private static final String BASE_URL = "http://sn-catalog.appspot.com/";
-	private File dataDir;
+	private EpisodeDatabase episodeDatabase;
 
-	public EpisodeFetcher(File dataDir) {
-		this.dataDir = dataDir;
-		if (!dataDir.exists())	dataDir.mkdir();
+	public EpisodeFetcher(EpisodeDatabase database) {
+		this.episodeDatabase = database;
 	}
 	
 	public ArrayList<Episode> getEpisodes() throws IOException, ClassNotFoundException, URISyntaxException {
@@ -63,8 +62,9 @@ public class EpisodeFetcher {
 	}
 
 	public Episode getEpisode(int episodeNumber) {
-		if (this.episodeExistsOnDisk(episodeNumber)) {
-			return this.loadFromDisk(episodeNumber);
+		Episode ep = this.episodeDatabase.getEpisode(episodeNumber);
+		if (ep != null) {
+			return ep;
 		}
 		try {
 			String urlNumber;
@@ -80,7 +80,8 @@ public class EpisodeFetcher {
 			MobileEpisode me = (MobileEpisode)getRemoteObject(url);
 			Episode episode = new Episode(me);
 			
-			this.saveToDisk(episode);
+			//this.saveToDisk(episode);
+			this.episodeDatabase.updateEpisode(episode);
 			
 			return episode;
 		} catch (Exception e) {
@@ -125,24 +126,6 @@ public class EpisodeFetcher {
 		
 		return (Object)Serializer.deserialize(response);
 		
-	}
-	
-	private boolean episodeExistsOnDisk(int number) {
-		return episodeFile(number).exists();
-	}
-	
-	private Episode loadFromDisk(int number) {
-		File file = episodeFile(number);
-		return (Episode) FileSystem.load(file);
-	}
-	
-	private boolean saveToDisk(Episode episode) {
-		File outputFile = episodeFile(episode.getEpisode().intValue());
-		return FileSystem.save(episode, outputFile);
-	}
-	
-	private File episodeFile(int number) {
-		return new File(this.dataDir, number+".episode");
 	}
 
 }

@@ -67,6 +67,7 @@ public final class EpisodeActivity  extends Activity{
         // this.getExternalFilesDir(null)
         
         this.database = new EpisodeDatabase(this);
+        mFetcher = new EpisodeFetcher(this.database);
 
         mProgressBar =  (SeekBar) findViewById(R.id.SeekBar);
         mProgressBar.setOnSeekBarChangeListener(weightSeekBarListener);
@@ -92,23 +93,15 @@ public final class EpisodeActivity  extends Activity{
         
         mPlayButton = (Button) findViewById(R.id.play);
         mPlayButton.setOnClickListener(playButtonListener);
-    }
 		
-	public void onStart() {
-		super.onStart();
-		
-		Bundle bun = getIntent().getExtras();
 		int episodeNumber = bun.getInt("episode");
-		
 		Episode episode = database.getEpisode(episodeNumber);
 		
 		if (episode != null)
 			mEpisode = episode;
-		else {
-			mFetcher = new EpisodeFetcher(this.episodeFolder);
-			episodeLoader = new LoadEpisode();
-			episodeLoader.execute(episodeNumber);
-		}
+		
+		episodeLoader = new LoadEpisode();
+		episodeLoader.execute(episodeNumber);
 	}
 	
 	private class LoadEpisode extends AsyncTask<Integer, Void, Boolean> {
