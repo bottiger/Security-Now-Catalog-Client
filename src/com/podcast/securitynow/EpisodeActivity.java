@@ -84,10 +84,12 @@ public final class EpisodeActivity  extends Activity{
         
         mButtons.add(mButton1);
         mButtons.add(mButton2);
-        mButtons.add(mButton3);
+        mButtons.add(mButton3);//
         
         Bundle bun = getIntent().getExtras();
         mTitle.setText(bun.getString("title"));
+        
+        // is this needed?
         Spanned desc = Html.fromHtml(bun.getString("description"));
         mDescription.setText(desc);
         
@@ -97,28 +99,37 @@ public final class EpisodeActivity  extends Activity{
 		int episodeNumber = bun.getInt("episode");
 		Episode episode = database.getEpisode(episodeNumber);
 		
-		if (episode != null)
+		if (episode != null) {
 			mEpisode = episode;
+			mDescription.setText(mEpisode.getDescription());
+		}
 		
 		episodeLoader = new LoadEpisode();
 		episodeLoader.execute(episodeNumber);
+		
 	}
 	
 	private class LoadEpisode extends AsyncTask<Integer, Void, Boolean> {
         protected Boolean doInBackground(Integer... number) {
-        	mEpisode = new Episode(mFetcher.getEpisode(number[0])); //
+        	if (!mEpisode.isComplete()) {
+        		mEpisode = new Episode(mFetcher.getEpisode(number[0], true)); //
+        		database.updateEpisode(mEpisode);
+        	}
         	return true;
         }
 
         protected void onPostExecute(Boolean t) {
-        	mDescription.setText(mEpisode.getDescription());
+        	if (mDescription.getText().equals(""))
+        		mDescription.setText(mEpisode.getDescription());
+        	
     		startStreamingAudio(mEpisode.getLink(), episodeFolder);
     		mPlayButton.setClickable(true);
     		playerStarted = true;
-    		database.updateEpisode(mEpisode);
     		
-    		LoadShowNotes showNotesLoader = new LoadShowNotes();
-    		showNotesLoader.execute(mEpisode.getEpisode().intValue());
+    		if (mEpisode.getShowNotes().toString().equals("")) {
+    			LoadShowNotes showNotesLoader = new LoadShowNotes();
+    			showNotesLoader.execute(mEpisode.getEpisode().intValue());
+    		}
         }
     }
 	

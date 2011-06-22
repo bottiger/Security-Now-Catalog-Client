@@ -4,6 +4,7 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 
 import sncatalog.shared.MobileEpisode;
+import android.text.Html;
 import android.text.Spanned;
 
 public class Episode extends MobileEpisode {
@@ -24,7 +25,8 @@ public class Episode extends MobileEpisode {
 	public Spanned getShowNotes() {
 		if (showNotes != null)
 			return showNotes;
-		return null;
+		else
+			return Html.fromHtml("");
 	}
 
 	public void setShowNotes(Spanned showNotes) {
@@ -35,6 +37,15 @@ public class Episode extends MobileEpisode {
 		String url = "http://www.podtrac.com/pts/redirect.mp3/aolradio.podcast.aol.com/sn/sn*.mp3";
 		url = url.replace("*", intToString(this.getEpisode().intValue(), 4));
 		return url;
+	}
+	
+	public boolean isComplete() {
+		// This method is incomplete
+		if (getDescription().equals("") ||
+			getTransscript().equals("")) {
+			return false;
+		}
+		return true;
 	}
 	
 	private static String intToString(int num, int digits) {

@@ -4,10 +4,11 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-    <ListView android:id="@+id/android:list"
+    <ListView android:id="@android:id/list"
         android:layout_width="fill_parent" 
         android:layout_height="fill_parent"
-        android:layout_marginBottom="50dip" />  
+        android:paddingBottom="50dip" />
+        <!-- android:layout_marginBottom="50dip" />  -->  
         
        
       <include 

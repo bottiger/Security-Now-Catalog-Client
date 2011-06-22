@@ -14,13 +14,16 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.text.Html;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -50,13 +53,23 @@ public class MyListView extends ListActivity
 	private SeekBar mProgressBar;
 	private Button mPlayButton;
 	
+	private View mEpisodeList;
+	private View mPlayer;
+	
     @Override  
     public void onCreate(Bundle savedInstanceState) 
     {
         super.onCreate(savedInstanceState);  
         setContentView(R.layout.listview);
+        Log.d("Test", "Hello There - this is running");
         
         this.database = new EpisodeDatabase(this);
+        
+        mEpisodeList = findViewById(android.R.id.list);
+        mPlayer = findViewById(R.id.player);
+        
+        mEpisodeList.setPadding(0, 0, 0, 0);
+        mPlayer.setVisibility(8); // 8 = GONE
         
         mPlayButton = (Button) findViewById(R.id.play);
         mPlayButton.setOnClickListener(playButtonListener);
@@ -79,6 +92,8 @@ public class MyListView extends ListActivity
     	super.onResume();
     	SecurityNow sn = (SecurityNow)this.getApplication();
     	if (sn.smp != null) {
+    		mEpisodeList.setPadding(0, 0, 0, 50);
+    		mPlayer.setVisibility(0);
     		this.audioStreamer = sn.smp;
     		mProgressBar =  (SeekBar) findViewById(R.id.SeekBar);
     		mPlayButton = (Button) findViewById(R.id.play);
@@ -119,7 +134,8 @@ public class MyListView extends ListActivity
     	
     	ListAdapter lad = getListAdapter();
     	if (lad != null) {
-    		for (int i = 0; i < lad.getCount(); i++) {
+    		int count = lad.getCount();
+    		for (int i = 0; i < count-1; i++) {
     			Episode episode = (Episode) lad.getItem(i);
     			if (episodes.contains(episode))
     				episodes.remove(episode); //

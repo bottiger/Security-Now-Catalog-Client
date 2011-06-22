@@ -60,10 +60,14 @@ public class EpisodeFetcher {
 		
 		return current;
 	}
-
+	
 	public Episode getEpisode(int episodeNumber) {
+		return getEpisode(episodeNumber, false);
+	}
+
+	public Episode getEpisode(int episodeNumber, boolean getRemote) {
 		Episode ep = this.episodeDatabase.getEpisode(episodeNumber);
-		if (ep != null) {
+		if (ep != null && !getRemote) {
 			return ep;
 		}
 		try {

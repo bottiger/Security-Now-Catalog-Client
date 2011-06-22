@@ -21,7 +21,7 @@ public class EpisodeDatabaseHelper extends SQLiteOpenHelper {
     public static final String SHOWNOTES 	= "snownotes";
     
     private static final int DATABASE_VERSION = 1;
-    private static final String DATABASE_NAME = "episodesStore.db";
+    private static final String DATABASE_NAME = "episodeStore.db";
     private static final String DICTIONARY_TABLE_NAME = "episodes";
     private static final String DICTIONARY_TABLE_CREATE =
                 "CREATE TABLE " + DICTIONARY_TABLE_NAME + " (" +
@@ -37,7 +37,12 @@ public class EpisodeDatabaseHelper extends SQLiteOpenHelper {
                 ");";
     
     EpisodeDatabaseHelper(Context context) {
-        super(context, Config.appFolder + DATABASE_NAME, null, DATABASE_VERSION);
+        super(context, getDataPath(), null, DATABASE_VERSION);
+    }
+    
+    private static String getDataPath() {
+    	String path = Config.appFolder + File.separator + DATABASE_NAME;
+    	return path;
     }
 
     @Override
